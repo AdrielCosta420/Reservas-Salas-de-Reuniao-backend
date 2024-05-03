@@ -3,6 +3,7 @@ const express = require('express')
 const mongoose = require('mongoose')
 
 const UserRoutes = require('./routes/UserRoutes');
+const MeetingRoomRoutes = require('./routes/MeetingRoomRoutes');
 
 const app = express();
 
@@ -12,6 +13,7 @@ app.use(express.json());
 
 
 app.use('/users', UserRoutes);
+app.use('/rooms', MeetingRoomRoutes);
 
 app.get('/', (req, res) => {
     res.status(200).json({ msg: "Bem vindo a nossa API!" });
