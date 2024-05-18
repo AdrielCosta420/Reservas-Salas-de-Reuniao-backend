@@ -1,4 +1,7 @@
 const MeetingRoom = require('../models/MeetingRoom');
+const jwt = require('jsonwebtoken');
+const getToken = require('../helpers/get_token');
+require('dotenv').config()
 
 const createMeetingRoom = async (req, res) => {
     const { name, description, status } = req.body;
@@ -59,10 +62,23 @@ const getAllRooms = async (req, res) => {
 
 const reserveRoom = async (req, res) => {
     const id = req.params.id;
+
     const { startTime, endTime, participants } = req.body;
 
+    let userId;
     try {
+
+        if (req.headers.authorization) {
+            const secret = process.env.JWT_SECRET;
+
+            const token = getToken(req);
+            const decoded = jwt.verify(token, secret);
+            userId = decoded.id;
+
+        }
         const room = await MeetingRoom.findById(id);
+
+
         if (!room) {
             return res.status(404).json({ message: 'Sala de reunião não encontrada.' });
         }
@@ -71,11 +87,15 @@ const reserveRoom = async (req, res) => {
             return res.status(409).json({ message: 'Sala já está ocupada para este horário.' });
         }
 
+
         room.status = 'ocupada';
         room.participants = participants;
         room.startTime = startTime;
         room.endTime = endTime;
+        room.reservedBy = userId;
+
         await room.save();
+
         res.status(200).json(room);
     } catch (error) {
         res.status(500).json({ msg: 'Erro no servidor', error: error.message });
@@ -85,11 +105,29 @@ const reserveRoom = async (req, res) => {
 const cancelRoom = async (req, res) => {
     const id = req.params.id;
 
+
+    let userId;
+
     try {
+        if (req.headers.authorization) {
+            const secret = process.env.JWT_SECRET;
+
+            const token = getToken(req);
+            const decoded = jwt.verify(token, secret);
+            
+            userId = decoded.id;
+        }
+        
+
         const room = await MeetingRoom.findById(id);
         if (!room) {
             return res.status(404).json({ message: 'Sala de reunião não encontrada.' });
         }
+
+        if (room.reservedBy.toString() !== userId) {
+            return res.status(403).json({ message: 'Você não tem permissão para cancelar esta reserva.' });
+        }
+
 
         if (room.status === 'livre') {
             return res.status(409).json({ message: 'A sala já está livre.' });
@@ -108,5 +146,24 @@ const cancelRoom = async (req, res) => {
 };
 
 
+const deleteRoom = async (req, res) => {
+    const id = req.params.id;
 
-module.exports = { createMeetingRoom, getAllRooms, reserveRoom, updateRoom, cancelRoom }
+
+    try {
+        const room = MeetingRoom.findById(id);
+
+        if (!room) {
+            return res.status(404).json({ msg: 'A sala informada não existe.' });
+        }
+
+        await room.deleteOne();
+        res.status(200).json({ msg: 'Sala deletada com sucesso!' });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro no servidor', error: error.message });
+    }
+}
+
+
+
+module.exports = { createMeetingRoom, getAllRooms, reserveRoom, updateRoom, cancelRoom, deleteRoom }

@@ -3,6 +3,8 @@ const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const createUserToken = require('../helpers/create_user_token');
 const getToken = require('../helpers/get_token');
+const jwt = require('jsonwebtoken');
+
 
 const register = async (req, res) => {
     const { name, email, password } = req.body
